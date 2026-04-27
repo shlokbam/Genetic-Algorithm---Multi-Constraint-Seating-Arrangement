@@ -1,11 +1,11 @@
 import random
-import copy
 from data_representation import encode
 from fitness_module       import rank_population, evaluate_fitness
 from genetic_operators    import (
     tournament_selection, order_crossover,
     swap_mutation, scramble_mutation
 )
+
 
 class GeneticAlgorithm:
     def __init__(self, students, hall_config, ga_params):
@@ -38,7 +38,7 @@ class GeneticAlgorithm:
 
         # Elitism: carry the best chromosomes unchanged
         for i in range(self.elitism_n):
-            new_population.append(copy.deepcopy(scored[i][0]))
+            new_population.append(scored[i][0][:])
 
         # Fill the rest with offspring
         while len(new_population) < self.pop_size:
@@ -50,7 +50,7 @@ class GeneticAlgorithm:
             if random.random() < self.cx_rate:
                 child = order_crossover(parent1, parent2)
             else:
-                child = copy.deepcopy(parent1)
+                child = parent1[:]
 
             # Mutation
             child = swap_mutation(child, self.mut_rate)

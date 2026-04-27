@@ -1,15 +1,18 @@
-
 import random
-import copy
 
 def tournament_selection(scored_population, tournament_size=5):
-
+    """
+    Selects the best individual from a random subset of the population.
+    """
     contestants = random.sample(scored_population, min(tournament_size, len(scored_population)))
     winner = max(contestants, key=lambda x: x[1])
-    return copy.deepcopy(winner[0])
+    return winner[0] # Returns a reference to the chromosome (list)
+
 
 def order_crossover(parent1, parent2):
-
+    """
+    Preserves relative ordering of students from parent1 and fills remaining from parent2.
+    """
     size = len(parent1)
     child = [None] * size
 
@@ -20,7 +23,7 @@ def order_crossover(parent1, parent2):
     # Step 2: copy segment from parent1
     placed_ids = set()
     for i in range(start, end + 1):
-        child[i] = copy.deepcopy(parent1[i])
+        child[i] = parent1[i]
         if parent1[i] is not None:
             placed_ids.add(parent1[i]["id"])
 
@@ -30,11 +33,9 @@ def order_crossover(parent1, parent2):
         while p2_idx < size:
             gene = parent2[p2_idx]
             p2_idx += 1
-            if gene is None:
+            if gene is None or gene["id"] in placed_ids:
                 continue
-            if gene["id"] in placed_ids:
-                continue
-            child[i] = copy.deepcopy(gene)
+            child[i] = gene
             placed_ids.add(gene["id"])
             break
 
@@ -42,13 +43,16 @@ def order_crossover(parent1, parent2):
     missing = [g for g in parent1 if g is not None and g["id"] not in placed_ids]
     for i in range(size):
         if child[i] is None and missing:
-            child[i] = copy.deepcopy(missing.pop(0))
+            child[i] = missing.pop(0)
 
     return child
 
+
 def swap_mutation(chromosome, mutation_rate=0.05):
-  
-    chrom = copy.deepcopy(chromosome)
+    """
+    Randomly swaps two students' positions.
+    """
+    chrom = chromosome[:] # Fast shallow copy of the list
     size  = len(chrom)
     for i in range(size):
         if random.random() < mutation_rate:
@@ -58,8 +62,10 @@ def swap_mutation(chromosome, mutation_rate=0.05):
 
 
 def scramble_mutation(chromosome, mutation_rate=0.05):
-   
-    chrom = copy.deepcopy(chromosome)
+    """
+    Randomly shuffles a sub-segment of the chromosome.
+    """
+    chrom = chromosome[:] # Fast shallow copy of the list
     if random.random() < mutation_rate:
         size  = len(chrom)
         start = random.randint(0, size - 2)

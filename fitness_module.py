@@ -30,114 +30,128 @@ def evaluate_fitness(chromosome, hall_config, use_diagonals=True):
     total = hall_config["total_seats"]
     penalty = 0
 
+    # Build grid and extract fast-lookup data
     grid = [[None] * cols for _ in range(rows)]
-    for seat_idx in range(total):
-        if chromosome[seat_idx] is not None:
+    occupied_indices = []
+    
+    for seat_idx, student in enumerate(chromosome):
+        if student is not None:
             r, c = divmod(seat_idx, cols)
-            grid[r][c] = chromosome[seat_idx]
+            grid[r][c] = student
+            occupied_indices.append((seat_idx, r, c, student))
 
     offsets = ALL_OFFSETS if use_diagonals else ADJACENT_OFFSETS
 
-    # Pass 1: pairwise neighbour checks
-    for seat_idx in range(total):
-        student = chromosome[seat_idx]
-        if student is None:
-            continue
-        r, c = divmod(seat_idx, cols)
+    # Pass 1: pairwise neighbour checks + Roll No Proximity
+    for seat_idx, r, c, student in occupied_indices:
+        s_branch = student["branch"]
+        s_subject = student["subject"]
+        s_div = student["division"]
+        
+        # Roll No Parsing (cached if possible, but here we do it once per student per fitness check)
+        # Optimized: Only parse if we find a same-branch neighbor
+        roll1 = None
 
         for (dr, dc) in offsets:
             nr, nc = r + dr, c + dc
-            if not (0 <= nr < rows and 0 <= nc < cols):
-                continue
-            neighbour = grid[nr][nc]
-            if neighbour is None:
-                continue
+            if 0 <= nr < rows and 0 <= nc < cols:
+                neighbour = grid[nr][nc]
+                if neighbour is None:
+                    continue
 
-            is_adjacent = (dr, dc) in ADJACENT_OFFSETS
+                is_adjacent = (dr, dc) in ADJACENT_OFFSETS
+                n_branch = neighbour["branch"]
+                n_subject = neighbour["subject"]
+                
+                # Branch check
+                if n_branch == s_branch:
+                    penalty += ADJACENT_PENALTY if is_adjacent else DIAGONAL_PENALTY
+                    
+                    # Roll proximity (only for adjacent same-branch)
+                    if is_adjacent:
+                        try:
+                            if roll1 is None:
+                                roll1 = int(''.join(filter(str.isdigit, student["roll_no"])))
+                            roll2 = int(''.join(filter(str.isdigit, neighbour["roll_no"])))
+                            if abs(roll1 - roll2) == 1:
+                                penalty += ROLL_PROXIMITY_PENALTY
+                        except ValueError:
+                            pass
 
-            # Constraint 1 & 2: Same branch
-            if neighbour["branch"] == student["branch"]:
-                penalty += ADJACENT_PENALTY if is_adjacent else DIAGONAL_PENALTY
+                # Subject check
+                if n_subject == s_subject:
+                    penalty += SAME_SUBJECT_ADJ_PENALTY if is_adjacent else SAME_SUBJECT_DIAG_PENALTY
 
-            # Constraint 8: Same subject
-            if neighbour["subject"] == student["subject"]:
-                penalty += SAME_SUBJECT_ADJ_PENALTY if is_adjacent else SAME_SUBJECT_DIAG_PENALTY
+                # Division check
+                if n_branch == s_branch and neighbour["division"] == s_div:
+                    penalty += SAME_DIVISION_ADJ_PENALTY if is_adjacent else SAME_DIVISION_DIAG_PENALTY
 
-            # Constraint 9: Same division within same branch
-            if neighbour["branch"] == student["branch"] and neighbour["division"] == student["division"]:
-                penalty += SAME_DIVISION_ADJ_PENALTY if is_adjacent else SAME_DIVISION_DIAG_PENALTY
-
+    # Pairwise penalties are counted twice (A-B and B-A)
     penalty //= 2
 
     # Pass 2: row-level checks
     for r in range(rows):
-        row_students = [grid[r][c] for c in range(cols) if grid[r][c] is not None]
-
-        branch_counts = Counter(s["branch"] for s in row_students)
+        row = grid[r]
+        branch_counts = {}
+        subj_counts = {}
+        div_counts = {}
+        
+        for student in row:
+            if student is None: continue
+            
+            b = student["branch"]
+            s = student["subject"]
+            d = (b, student["division"])
+            
+            branch_counts[b] = branch_counts.get(b, 0) + 1
+            subj_counts[s] = subj_counts.get(s, 0) + 1
+            div_counts[d] = div_counts.get(d, 0) + 1
+            
         for count in branch_counts.values():
-            if count > 1:
-                penalty += SAME_ROW_PENALTY * (count - 1)
+            if count > 1: penalty += SAME_ROW_PENALTY * (count - 1)
+        for count in subj_counts.values():
+            if count > 1: penalty += SAME_SUBJECT_ROW_PENALTY * (count - 1)
+        for count in div_counts.values():
+            if count > 1: penalty += SAME_DIVISION_ROW_PENALTY * (count - 1)
 
-        subject_counts = Counter(s["subject"] for s in row_students)
-        for count in subject_counts.values():
-            if count > 1:
-                penalty += SAME_SUBJECT_ROW_PENALTY * (count - 1)
-
-        division_counts = Counter((s["branch"], s["division"]) for s in row_students)
-        for count in division_counts.values():
-            if count > 1:
-                penalty += SAME_DIVISION_ROW_PENALTY * (count - 1)
-
-    # Pass 3: column-level checks
+    # Pass 3: column-level checks + Front-Back
     for c in range(cols):
-        col_students = [grid[r][c] for r in range(rows) if grid[r][c] is not None]
-        branch_counts = Counter(s["branch"] for s in col_students)
-        for count in branch_counts.values():
-            if count > 1:
-                penalty += SAME_COL_PENALTY * (count - 1)
+        prev_branch = None
+        col_branch_counts = {}
+        
+        for r in range(rows):
+            student = grid[r][c]
+            if student is None:
+                prev_branch = None
+                continue
+            
+            b = student["branch"]
+            col_branch_counts[b] = col_branch_counts.get(b, 0) + 1
+            
+            # Front-back check
+            if prev_branch == b:
+                penalty += FRONT_BACK_PENALTY
+            prev_branch = b
+            
+        for count in col_branch_counts.values():
+            if count > 1: penalty += SAME_COL_PENALTY * (count - 1)
 
     # Pass 4: 3x3 cluster check
     for r in range(rows - 2):
         for c in range(cols - 2):
-            block = []
+            counts = {}
             for br in range(r, r + 3):
-                for bc in range(c, c + 3):
-                    if grid[br][bc] is not None:
-                        block.append(grid[br][bc])
-            branch_counts = Counter(s["branch"] for s in block)
-            for count in branch_counts.values():
+                row_slice = grid[br][c : c+3]
+                for student in row_slice:
+                    if student:
+                        b = student["branch"]
+                        counts[b] = counts.get(b, 0) + 1
+            
+            for count in counts.values():
                 if count >= 3:
                     penalty += CLUSTER_PENALTY * (count - 2)
 
-    # Pass 5: front-back same column consecutive rows
-    for c in range(cols):
-        for r in range(rows - 1):
-            s1 = grid[r][c]
-            s2 = grid[r + 1][c]
-            if s1 and s2 and s1["branch"] == s2["branch"]:
-                penalty += FRONT_BACK_PENALTY
-
-    # Pass 6: roll-number proximity
-    for seat_idx in range(total):
-        student = chromosome[seat_idx]
-        if student is None:
-            continue
-        r, c = divmod(seat_idx, cols)
-        for (dr, dc) in ADJACENT_OFFSETS:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < rows and 0 <= nc < cols:
-                neighbour = grid[nr][nc]
-                if neighbour and neighbour["branch"] == student["branch"]:
-                    try:
-                        roll1 = int(''.join(filter(str.isdigit, student["roll_no"])))
-                        roll2 = int(''.join(filter(str.isdigit, neighbour["roll_no"])))
-                        if abs(roll1 - roll2) == 1:
-                            penalty += ROLL_PROXIMITY_PENALTY
-                    except ValueError:
-                        pass
-
-    fitness = 1.0 / (1.0 + penalty)
-    return fitness
+    return 1.0 / (1.0 + penalty)
 
 
 def rank_population(population, hall_config):

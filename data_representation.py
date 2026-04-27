@@ -1,14 +1,12 @@
 import random
-import copy
+
 
 def encode(students, hall_config):
-   
-
     total_seats = hall_config["total_seats"]
     chromosome  = [None] * total_seats
     indices     = random.sample(range(total_seats), len(students))
     for seat_idx, student in zip(indices, students):
-        chromosome[seat_idx] = copy.deepcopy(student)
+        chromosome[seat_idx] = student
     return chromosome
 
 def decode(chromosome, hall_config):
