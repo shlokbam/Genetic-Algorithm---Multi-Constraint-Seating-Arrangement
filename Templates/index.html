@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Exam Seating Optimizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2236;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Header */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  .header-inner { display: flex; align-items: center; gap: 16px; }
+  .logo {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-text h1 {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .header-text p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .badge {
+    margin-left: auto;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2);
+  }
+  .panel-header .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .panel-header h2 {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .panel-body { padding: 20px; }
+
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+  }
+  input, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 9px 12px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Toggle */
+  .toggle-group {
+    display: flex;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .toggle-btn {
+    flex: 1; padding: 9px; text-align: center;
+    font-size: 13px; cursor: pointer;
+    color: var(--text2);
+    transition: all 0.2s;
+    border: none; background: transparent;
+    font-family: var(--sans);
+  }
+  .toggle-btn.active {
+    background: rgba(0,212,255,0.15);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Run button */
+  .btn-run {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--accent), #0090cc);
+    color: #000;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  .btn-run:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,212,255,0.3); }
+  .btn-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 18px 0;
+  }
+
+  /* Stats row */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+
+  /* Progress */
+  .progress-wrap { margin-bottom: 18px; }
+  .progress-bar-bg {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    height: 8px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    border-radius: 20px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 11px; color: var(--text2);
+  }
+
+  /* Conflict badges */
+  .conflict-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .conflict-badge {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+  .conflict-badge .num { font-size: 18px; font-weight: 700; display: block; }
+  .cb-branch  { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3);  color: #f87171; }
+  .cb-subject { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
+  .cb-div     { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
+
+  /* Chart area */
+  .chart-wrap {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 18px;
+    position: relative;
+    height: 150px;
+  }
+  canvas { width: 100% !important; height: 100% !important; }
+
+  /* Seating grid */
+  .grid-wrap { overflow-x: auto; }
+  .seat-grid {
+    display: inline-grid;
+    gap: 4px;
+    padding: 4px;
+  }
+  .seat {
+    width: 88px; height: 68px;
+    border-radius: 8px;
+    padding: 5px 6px;
+    font-size: 9.5px;
+    line-height: 1.4;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: default;
+  }
+  .seat:hover { transform: scale(1.08); z-index: 10; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  .seat.empty {
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text2); font-size: 10px;
+  }
+  .seat-id   { font-family: var(--mono); font-weight: 700; font-size: 10px; color: rgba(255,255,255,0.95); }
+  .seat-branch { font-weight: 600; font-size: 9px; color: rgba(255,255,255,0.85); }
+  .seat-subj { font-size: 8.5px; color: rgba(255,255,255,0.65); font-style: italic; }
+  .seat-div  { font-size: 8px; color: rgba(255,255,255,0.5); }
+  .seat-num {
+    position: absolute; top: 3px; right: 5px;
+    font-family: var(--mono); font-size: 7px; color: rgba(255,255,255,0.3);
+  }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text2);
+  }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  /* Row labels */
+  .grid-outer { display: flex; gap: 6px; align-items: flex-start; }
+  .row-labels { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+  .row-label {
+    height: 68px; display: flex; align-items: center;
+    font-family: var(--mono); font-size: 10px; color: var(--text2);
+    white-space: nowrap;
+  }
+
+  /* Status */
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block; margin-right: 6px;
+  }
+  .status-idle    { background: var(--text2); }
+  .status-running { background: var(--warn); animation: pulse 1s infinite; }
+  .status-done    { background: var(--accent3); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Placeholder */
+  .placeholder {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 300px;
+    color: var(--text2);
+    gap: 12px;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+  }
+  .placeholder .icon { font-size: 40px; opacity: 0.4; }
+  .placeholder p { font-size: 14px; }
+
+  /* Section title */
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .hidden { display: none !important; }
+
+  /* Attendance Panel */
+  .attend-list {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 12px;
+    background: var(--bg);
+  }
+  .attend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    transition: background 0.15s;
+    font-size: 12.5px;
+  }
+  .attend-item:hover { background: var(--surface2); }
+  .attend-item input[type=checkbox] {
+    width: 15px; height: 15px;
+    accent-color: var(--danger);
+    flex-shrink: 0;
+  }
+  .attend-item .ai-name { flex: 1; font-weight: 500; color: var(--text); }
+  .attend-item .ai-meta { font-size: 10.5px; color: var(--text2); font-family: var(--mono); }
+  .attend-absent { text-decoration: line-through; opacity: 0.5; }
+
+  .new-student-form {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .new-student-form .ns-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent3);
+    margin-bottom: 8px;
+  }
+  .btn-add-student {
+    width: 100%;
+    padding: 9px;
+    background: rgba(16,185,129,0.12);
+    border: 1px dashed rgba(16,185,129,0.4);
+    color: var(--accent3);
+    font-family: var(--mono);
+    font-size: 11px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+  }
+  .btn-add-student:hover { background: rgba(16,185,129,0.2); }
+  .btn-remove-ns {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #f87171;
+    font-size: 11px;
+    border-radius: 5px;
+    padding: 2px 7px;
+    cursor: pointer;
+  }
+  .btn-rerun {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--accent3), #059669);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+  .btn-rerun:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(16,185,129,0.3); }
+  .btn-rerun:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .absent-count-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #f87171;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: auto;
+  }
+  .new-count-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: rgba(16,185,129,0.15);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: var(--accent3);
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-left: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-inner">
+      <div class="logo">🎓</div>
+      <div class="header-text">
+        <h1>EXAM_SEATING.optimizer</h1>
+        <p>Genetic Algorithm — Multi-Constraint Seating Arrangement</p>
+      </div>
+      <div class="badge">GA v2.0</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: Config Panel -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="dot" style="background:#00d4ff"></div>
+          <h2>Configuration</h2>
+        </div>
+        <div class="panel-body">
+
+          <div class="section-title">Data Source</div>
+          <div class="toggle-group">
+            <button class="toggle-btn active" id="demoBtn" onclick="setMode('demo')">Demo Data</button>
+            <button class="toggle-btn" id="customBtn" onclick="setMode('custom')">Custom</button>
+          </div>
+
+          <div id="customInfo" class="hidden" style="margin-bottom:14px;">
+            <div class="form-group">
+              <label>Upload Excel File</label>
+              <input type="file" id="excelFile" accept=".xlsx,.xls" />
+              <small style="color:var(--text2);font-size:11px;line-height:1.4;display:block;margin-top:6px;">
+                Excel should include columns: <strong>Name</strong>, <strong>Roll No</strong>, <strong>Branch</strong>, <strong>Subject</strong>, <strong>Division</strong>.</small>
+            </div>
+            <div class="form-group">
+              <label>Number of Students</label>
+              <input type="number" id="numStudents" min="1" max="200" value="10" onchange="buildStudentForm()"/>
+            </div>
+            <div id="studentForm" style="max-height:280px;overflow-y:auto;padding-right:4px;"></div>
+          </div>
+
+          <div class="section-title">Hall Layout</div>
+          <div class="row2">
+            <div class="form-group">
+              <label>Rows</label>
+              <input type="number" id="rows" value="6" min="1" max="20"/>
+            </div>
+            <div class="form-group">
+              <label>Columns</label>
+              <input type="number" id="cols" value="10" min="1" max="20"/>
+            </div>
+          </div>
+
+          <div class="section-title">GA Parameters</div>
+          <div class="row2">
+            <div class="form-group">
+              <label>Population</label>
+              <input type="number" id="popSize" value="150" min="10" max="500"/>
+            </div>
+            <div class="form-group">
+              <label>Generations</label>
+              <input type="number" id="generations" value="500" min="10" max="2000"/>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="form-group">
+              <label>Crossover Rate</label>
+              <input type="number" id="cxRate" value="0.85" min="0" max="1" step="0.01"/>
+            </div>
+            <div class="form-group">
+              <label>Mutation Rate</label>
+              <input type="number" id="mutRate" value="0.04" min="0" max="1" step="0.01"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Elitism Count</label>
+            <input type="number" id="elitism" value="8" min="1" max="20"/>
+          </div>
+
+          <button class="btn-run" id="runBtn" onclick="runOptimizer()">▶ RUN OPTIMIZER</button>
+        </div>
+      </div>
+
+      <!-- Status + Progress -->
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel-header">
+          <div class="dot" style="background:#f59e0b"></div>
+          <h2>Progress</h2>
+        </div>
+        <div class="panel-body">
+          <div style="font-size:13px;margin-bottom:14px;">
+            <span class="status-dot status-idle" id="statusDot"></span>
+            <span id="statusText">Idle — configure and run optimizer</span>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress-label">
+              <span>Generation</span>
+              <span id="genLabel">0 / 0</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+          </div>
+
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-val" id="statGen">—</div>
+              <div class="stat-label">Generation</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="statBest">—</div>
+              <div class="stat-label">Best Fit</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" id="statAvg">—</div>
+              <div class="stat-label">Avg Fit</div>
+            </div>
+          </div>
+
+          <!-- Mini chart -->
+          <div class="section-title">Fitness Curve</div>
+          <div class="chart-wrap">
+            <canvas id="fitnessChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Results Panel -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="dot" style="background:#10b981"></div>
+          <h2>Seating Arrangement</h2>
+          <span id="fitnessTag" style="margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--accent3);"></span>
+        </div>
+        <div class="panel-body">
+
+          <div id="placeholder" class="placeholder">
+            <div class="icon">🪑</div>
+            <p>Run the optimizer to see the seating arrangement</p>
+          </div>
+
+          <div id="results" class="hidden">
+            <!-- Conflict Summary -->
+            <div class="section-title">Conflict Summary</div>
+            <div class="conflict-row">
+              <div class="conflict-badge cb-branch">
+                <span class="num" id="cBranch">0</span>Branch
+              </div>
+              <div class="conflict-badge cb-subject">
+                <span class="num" id="cSubject">0</span>Subject
+              </div>
+              <div class="conflict-badge cb-div">
+                <span class="num" id="cDiv">0</span>Division
+              </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="section-title">Branch Legend</div>
+            <div class="legend" id="legend"></div>
+
+            <!-- Seating Grid -->
+            <div class="section-title">Seating Grid</div>
+            <div class="grid-outer">
+              <div class="row-labels" id="rowLabels"></div>
+              <div class="grid-wrap">
+                <div class="seat-grid" id="seatGrid"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Attendance Management Panel ── -->
+          <div id="attendancePanel" class="hidden" style="margin-top:24px;">
+            <div class="section-title">
+              Attendance Management
+              <span class="absent-count-badge" id="absentBadge">0 absent</span>
+              <span class="new-count-badge" id="newBadge">0 new</span>
+            </div>
+
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px;">
+              ✓ Uncheck students who are <strong style="color:#f87171">absent</strong>. Add late/replacement students below. Then re-run the optimizer.
+            </p>
+
+            <!-- Existing students checklist -->
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">
+              Registered Students
+            </div>
+            <div class="attend-list" id="attendList"></div>
+
+            <!-- Add new students -->
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">
+              Add New / Replacement Students
+            </div>
+            <div id="newStudentForms"></div>
+            <button class="btn-add-student" onclick="addNewStudentForm()">＋ Add Student</button>
+
+            <button class="btn-rerun" id="rerunBtn" onclick="rerunOptimizer()">⟳ RE-OPTIMIZE WITH ATTENDANCE</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let mode = 'demo';
+let pollInterval = null;
+let maxGen = 500;
+
+const BRANCH_COLORS = {
+  "CS"  : "#4E79A7",
+  "IT"  : "#F28E2B",
+  "AIML": "#E15759",
+  "ENTC": "#76B7B2",
+  "MECH": "#59A14F",
+};
+const COLOR_POOL = ["#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F",
+                    "#EDC948","#B07AA1","#FF9DA7","#9C755F","#00d4ff"];
+const branchColorMap = {};
+
+function getBranchColor(branch) {
+  if (!branchColorMap[branch]) {
+    const idx = Object.keys(branchColorMap).length % COLOR_POOL.length;
+    branchColorMap[branch] = BRANCH_COLORS[branch] || COLOR_POOL[idx];
+  }
+  return branchColorMap[branch];
+}
+
+// ── Mode Toggle ────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('demoBtn').classList.toggle('active', m === 'demo');
+  document.getElementById('customBtn').classList.toggle('active', m === 'custom');
+  document.getElementById('customInfo').classList.toggle('hidden', m !== 'custom');
+  if (m === 'custom') buildStudentForm();
+}
+
+function buildStudentForm() {
+  const n = parseInt(document.getElementById('numStudents').value) || 5;
+  const branches  = ["CS","IT","AIML","ENTC","MECH"];
+  const subjects  = ["SE","AI","MLDL","DAA","DS"];
+  const divisions = ["A","B","C"];
+
+  let html = '';
+  for (let i = 0; i < n; i++) {
+    html += `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:8px;">STUDENT ${i+1}</div>
+      <div class="row2">
+        <div class="form-group" style="margin-bottom:6px;">
+          <label>Name</label>
+          <input name="name[]" value="Student_${String(i+1).padStart(3,'0')}"/>
+        </div>
+        <div class="form-group" style="margin-bottom:6px;">
+          <label>Roll No</label>
+          <input name="roll[]" value="R${String(i+1).padStart(3,'0')}"/>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Branch</label>
+          <select name="branch[]">
+            ${branches.map(b => `<option value="${b}">${b}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Subject</label>
+          <select name="subject[]">
+            ${subjects.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:6px;margin-bottom:0;">
+        <label>Division</label>
+        <select name="division[]">
+          ${divisions.map(d => `<option value="${d}">${d}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+  }
+  document.getElementById('studentForm').innerHTML = html;
+}
+
+// ── Run ────────────────────────────────────────────────────
+async function runOptimizer() {
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  maxGen = parseInt(document.getElementById('generations').value) || 500;
+
+  // Reset chart
+  chartData = { gens: [], best: [], avg: [] };
+  drawChart();
+
+  setStatus('running');
+  document.getElementById('placeholder').classList.add('hidden');
+  document.getElementById('results').classList.add('hidden');
+
+  const form = new FormData();
+  form.append('rows',        document.getElementById('rows').value);
+  form.append('cols',        document.getElementById('cols').value);
+  form.append('pop_size',    document.getElementById('popSize').value);
+  form.append('generations', document.getElementById('generations').value);
+  form.append('cx_rate',     document.getElementById('cxRate').value);
+  form.append('mut_rate',    document.getElementById('mutRate').value);
+  form.append('elitism',     document.getElementById('elitism').value);
+  form.append('use_demo',    mode === 'demo' ? 'true' : 'false');
+
+  if (mode === 'custom') {
+    const excelInput = document.getElementById('excelFile');
+    if (excelInput && excelInput.files.length > 0) {
+      form.append('excel_file', excelInput.files[0]);
+    } else {
+      document.querySelectorAll('[name="name[]"]')    .forEach(el => form.append('name[]',     el.value));
+      document.querySelectorAll('[name="roll[]"]')    .forEach(el => form.append('roll[]',     el.value));
+      document.querySelectorAll('[name="branch[]"]')  .forEach(el => form.append('branch[]',   el.value));
+      document.querySelectorAll('[name="subject[]"]') .forEach(el => form.append('subject[]',  el.value));
+      document.querySelectorAll('[name="division[]"]') .forEach(el => form.append('division[]', el.value));
+    }
+  }
+
+  await fetch('/run', { method: 'POST', body: form });
+
+  pollInterval = setInterval(pollProgress, 600);
+}
+
+async function pollProgress() {
+  const res  = await fetch('/progress');
+  const data = await res.json();
+
+  const gen  = data.generation;
+  const pct  = Math.min((gen / maxGen) * 100, 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('genLabel').textContent    = `${gen} / ${maxGen}`;
+  document.getElementById('statGen').textContent     = gen;
+  document.getElementById('statBest').textContent    = data.best_fitness.toFixed(5);
+  document.getElementById('statAvg').textContent     = data.avg_fitness.toFixed(5);
+
+  chartData.gens.push(gen);
+  chartData.best.push(data.best_fitness);
+  chartData.avg.push(data.avg_fitness);
+  drawChart();
+
+  if (data.done) {
+    clearInterval(pollInterval);
+    setStatus('done');
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('rerunBtn').disabled = false;
+    loadResult();
+  }
+}
+
+async function loadResult() {
+  const res  = await fetch('/result');
+  const data = await res.json();
+
+  document.getElementById('fitnessTag').textContent = `fitness: ${data.best_fitness}`;
+  document.getElementById('cBranch').textContent    = data.conflicts.branch;
+  document.getElementById('cSubject').textContent   = data.conflicts.subject;
+  document.getElementById('cDiv').textContent       = data.conflicts.division;
+
+  renderGrid(data.grid, data.hall_config);
+
+  // Extract all students from the result and pass directly — no extra fetch needed
+  const allStudents = [];
+  data.grid.forEach(function(row) {
+    row.forEach(function(gene) { if (gene) allStudents.push(gene); });
+  });
+
+  document.getElementById('results').classList.remove('hidden');
+  loadAttendancePanel(allStudents);
+}
+
+// ── Grid Renderer ──────────────────────────────────────────
+function renderGrid(grid, hall_config) {
+  const rows = hall_config.rows;
+  const cols = hall_config.cols;
+
+  const seatGrid  = document.getElementById('seatGrid');
+  const rowLabels = document.getElementById('rowLabels');
+  const legend    = document.getElementById('legend');
+
+  seatGrid.style.gridTemplateColumns = `repeat(${cols}, 88px)`;
+  seatGrid.innerHTML  = '';
+  rowLabels.innerHTML = '';
+  legend.innerHTML    = '';
+
+  const branchesFound = new Set();
+
+  for (let r = 0; r < rows; r++) {
+    // Row label
+    const rl = document.createElement('div');
+    rl.className = 'row-label';
+    rl.textContent = `R${r+1}`;
+    rowLabels.appendChild(rl);
+
+    for (let c = 0; c < cols; c++) {
+      const gene = grid[r][c];
+      const cell = document.createElement('div');
+
+      if (!gene) {
+        cell.className = 'seat empty';
+        cell.textContent = '—';
+      } else {
+        branchesFound.add(gene.branch);
+        const color = getBranchColor(gene.branch);
+        cell.className = 'seat';
+        cell.style.background = hexToRgba(color, 0.25);
+        cell.style.borderColor = hexToRgba(color, 0.5);
+
+        const seatIdx = r * cols + c;
+        cell.innerHTML = `
+          <div class="seat-num">#${seatIdx + 1}</div>
+          <div class="seat-id">${gene.name || 'S' + gene.id}</div>
+          <div class="seat-branch" style="color:${color}">${gene.branch}</div>
+          <div class="seat-subj">${gene.subject}</div>
+          <div class="seat-div">Div-${gene.division}</div>`;
+
+        cell.title = `ID:${gene.id} | ${gene.branch} | ${gene.subject} | Div-${gene.division} | ${gene.roll_no}`;
+      }
+      seatGrid.appendChild(cell);
+    }
+  }
+
+  // Build legend
+  branchesFound.forEach(branch => {
+    const color = getBranchColor(branch);
+    const item  = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<div class="legend-dot" style="background:${color}"></div>${branch}`;
+    legend.appendChild(item);
+  });
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ── Mini Chart ─────────────────────────────────────────────
+let chartData = { gens: [], best: [], avg: [] };
+
+function drawChart() {
+  const canvas = document.getElementById('fitnessChart');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  canvas.width  = W;
+  canvas.height = H;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const data = chartData;
+  if (data.gens.length < 2) return;
+
+  const pad   = { top: 10, right: 10, bottom: 20, left: 46 };
+  const cW    = W - pad.left - pad.right;
+  const cH    = H - pad.top - pad.bottom;
+
+  const maxVal = Math.max(...data.best) * 1.1 || 0.001;
+  const minVal = 0;
+
+  const xScale = (i) => pad.left + (i / (data.gens.length - 1)) * cW;
+  const yScale = (v) => pad.top + cH - ((v - minVal) / (maxVal - minVal)) * cH;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (i / 4) * cH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    const val = maxVal - (i / 4) * maxVal;
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '9px Space Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(4), pad.left - 4, y + 3);
+  }
+
+  // Avg line
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(124,58,237,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,4]);
+  data.avg.forEach((v, i) => {
+    i === 0 ? ctx.moveTo(xScale(i), yScale(v)) : ctx.lineTo(xScale(i), yScale(v));
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Best line
+  const grad = ctx.createLinearGradient(pad.left, 0, W - pad.right, 0);
+  grad.addColorStop(0, '#7c3aed');
+  grad.addColorStop(1, '#00d4ff');
+  ctx.beginPath();
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 2;
+  data.best.forEach((v, i) => {
+    i === 0 ? ctx.moveTo(xScale(i), yScale(v)) : ctx.lineTo(xScale(i), yScale(v));
+  });
+  ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '9px Space Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Gen 1', xScale(0), H - 4);
+  ctx.fillText(`Gen ${data.gens[data.gens.length-1]}`, xScale(data.gens.length-1), H - 4);
+}
+
+// ── Status ─────────────────────────────────────────────────
+function setStatus(s) {
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  dot.className = 'status-dot';
+  if (s === 'running') {
+    dot.classList.add('status-running');
+    text.textContent = 'Running optimization...';
+  } else if (s === 'done') {
+    dot.classList.add('status-done');
+    text.textContent = 'Optimization complete!';
+  } else {
+    dot.classList.add('status-idle');
+    text.textContent = 'Idle — configure and run optimizer';
+  }
+}
+
+// ── Attendance Management ───────────────────────────────────
+let currentStudents = [];
+let newStudentCount = 0;
+
+function loadAttendancePanel(students) {
+  currentStudents = students;
+  newStudentCount = 0;
+
+  const list = document.getElementById('attendList');
+  list.innerHTML = '';
+  document.getElementById('newStudentForms').innerHTML = '';
+
+  currentStudents.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'attend-item';
+    item.id = `ai-${s.id}`;
+    item.innerHTML = `
+      <input type="checkbox" id="chk-${s.id}" checked onchange="updateAbsentBadge()"/>
+      <label for="chk-${s.id}" style="cursor:pointer;flex:1;margin:0;">
+        <span class="ai-name">${s.name}</span>
+        <span class="ai-meta"> · ${s.branch} · ${s.roll_no} · Div-${s.division}</span>
+      </label>`;
+    list.appendChild(item);
+  });
+
+  updateAbsentBadge();
+  document.getElementById('attendancePanel').classList.remove('hidden');
+}
+
+function updateAbsentBadge() {
+  const total   = currentStudents.length;
+  const present = currentStudents.filter(s =>
+    document.getElementById(`chk-${s.id}`)?.checked
+  ).length;
+  const absent = total - present;
+  document.getElementById('absentBadge').textContent = `${absent} absent`;
+
+  // Strike-through absent rows
+  currentStudents.forEach(s => {
+    const item = document.getElementById(`ai-${s.id}`);
+    const chk  = document.getElementById(`chk-${s.id}`);
+    if (item && chk) {
+      item.querySelectorAll('.ai-name, .ai-meta').forEach(el => {
+        el.classList.toggle('attend-absent', !chk.checked);
+      });
+    }
+  });
+}
+
+function addNewStudentForm() {
+  newStudentCount++;
+  const idx      = newStudentCount;
+  const branches  = ["CS","IT","AIML","ENTC","MECH"];
+  const subjects  = ["SE","AI","MLDL","DAA","DS","DBMS","Thermodynamics"];
+  const divisions = ["A","B","C"];
+
+  const wrap = document.createElement('div');
+  wrap.className = 'new-student-form';
+  wrap.id = `ns-${idx}`;
+  wrap.innerHTML = `
+    <div class="ns-title">NEW STUDENT ${idx}</div>
+    <button class="btn-remove-ns" onclick="document.getElementById('ns-${idx}').remove(); updateNewBadge();">✕ Remove</button>
+    <div class="row2">
+      <div class="form-group" style="margin-bottom:6px;">
+        <label>Name</label>
+        <input class="ns-name" value="New_Student_${idx}"/>
+      </div>
+      <div class="form-group" style="margin-bottom:6px;">
+        <label>Roll No</label>
+        <input class="ns-roll" value="NEW${String(idx).padStart(3,'0')}"/>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Branch</label>
+        <select class="ns-branch">${branches.map(b => `<option>${b}</option>`).join('')}</select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Subject</label>
+        <select class="ns-subject">${subjects.map(s => `<option>${s}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:6px;margin-bottom:0;">
+      <label>Division</label>
+      <select class="ns-div">${divisions.map(d => `<option>${d}</option>`).join('')}</select>
+    </div>`;
+
+  document.getElementById('newStudentForms').appendChild(wrap);
+  updateNewBadge();
+}
+
+function updateNewBadge() {
+  const count = document.querySelectorAll('.new-student-form').length;
+  document.getElementById('newBadge').textContent = `${count} new`;
+}
+
+async function rerunOptimizer() {
+  const btn = document.getElementById('rerunBtn');
+  btn.disabled = true;
+
+  const presentStudents = currentStudents.filter(
+    s => document.getElementById('chk-' + s.id) && document.getElementById('chk-' + s.id).checked
+  );
+
+  const absentIds = currentStudents
+    .filter(s => document.getElementById('chk-' + s.id) && !document.getElementById('chk-' + s.id).checked)
+    .map(s => s.id);
+
+  const addedStudents = [];
+  document.querySelectorAll('.new-student-form').forEach(function(form) {
+    addedStudents.push({
+      name    : form.querySelector('.ns-name').value,
+      roll_no : form.querySelector('.ns-roll').value,
+      branch  : form.querySelector('.ns-branch').value,
+      subject : form.querySelector('.ns-subject').value,
+      division: form.querySelector('.ns-div').value,
+    });
+  });
+
+  const finalStudents = presentStudents.concat(addedStudents);
+  if (finalStudents.length === 0) {
+    alert('No students to seat — mark at least one student as present.');
+    btn.disabled = false;
+    return;
+  }
+
+  currentStudents = finalStudents;
+  maxGen = parseInt(document.getElementById('generations').value) || 500;
+  chartData = { gens: [], best: [], avg: [] };
+  drawChart();
+  setStatus('running');
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('attendancePanel').classList.add('hidden');
+
+  const body = {
+    absent_ids: absentIds,
+    new_students: addedStudents,
+    all_students: currentStudents,
+    rows: parseInt(document.getElementById('rows').value) || 6,
+    cols: parseInt(document.getElementById('cols').value) || 10,
+    pop_size: parseInt(document.getElementById('popSize').value) || 150,
+    generations: parseInt(document.getElementById('generations').value) || 500,
+    cx_rate: parseFloat(document.getElementById('cxRate').value) || 0.85,
+    mut_rate: parseFloat(document.getElementById('mutRate').value) || 0.04,
+    elitism: parseInt(document.getElementById('elitism').value) || 8
+  };
+
+  try {
+    const response = await fetch('/rerun', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      alert(error.error || 'Unable to re-run optimizer.');
+      btn.disabled = false;
+      return;
+    }
+    pollInterval = setInterval(pollProgress, 600);
+  } catch (err) {
+    alert('Failed to re-run optimizer. Check the console for details.');
+    console.error(err);
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
