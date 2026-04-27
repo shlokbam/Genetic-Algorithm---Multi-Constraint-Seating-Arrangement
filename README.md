@@ -2,8 +2,6 @@
 
 A powerful, web-based tool designed to automate and optimize exam seating arrangements. It uses a **Genetic Algorithm (GA)** to satisfy complex constraints, such as ensuring students from the same branch, subject, or division do not sit next to each other.
 
-![App Preview](https://via.placeholder.com/800x400?text=Exam+Seating+Optimizer+Dashboard) *(Replace with your actual screenshot)*
-
 ## 🚀 Features
 
 - **Genetic Algorithm Engine**: Uses advanced GA operators like Tournament Selection, Order Crossover (OX), and Swap/Scramble Mutation.
