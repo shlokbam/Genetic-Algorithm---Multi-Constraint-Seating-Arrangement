@@ -39,10 +39,9 @@ def order_crossover(parent1, parent2):
             placed_ids.add(gene["id"])
             break
 
-    # Step 4: repair missing students from parent1 if any positions are still empty
     missing = [g for g in parent1 if g is not None and g["id"] not in placed_ids]
     for i in range(size):
-        if child[i] is None and missing:
+    if child[i] is None and missing:
             child[i] = missing.pop(0)
 
     return child
