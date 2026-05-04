@@ -2,11 +2,14 @@
 Flask Web UI for Exam Seating Optimization
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 import json
 import threading
 import os
 import sys
+import io
+import pandas as pd
+from fpdf import FPDF
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -423,5 +426,5 @@ def rerun():
 if __name__ == "__main__":
     os.makedirs("templates", exist_ok=True)
     # Get port from environment variable for deployment (Render, etc.)
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
